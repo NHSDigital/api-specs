@@ -17,7 +17,15 @@
         <Condition>(scope JavaRegex "(.+\ urn:nhsd:apim:user-nhs-id:aal3:personal-demographics-service\ .+|^urn:nhsd:apim:user-nhs-id:aal3:personal-demographics-service\ .+|.+\ urn:nhsd:apim:user-nhs-id:aal3:personal-demographics-service$|^urn:nhsd:apim:user-nhs-id:aal3:personal-demographics-service$|.+\ personal-demographics-service:USER-RESTRICTED\ .+|^personal-demographics-service:USER-RESTRICTED\ .+|.+\ personal-demographics-service:USER-RESTRICTED$|^personal-demographics-service:USER-RESTRICTED$)")</Condition>
       </Step>
       <Step>
+        <Name>AssignMessage.SetAccessModeCitizenAccess</Name>
+        <Condition>(scope JavaRegex "(.+\ urn:nhsd:apim:user-nhs-login:P9:personal-demographics-service\ .+|^urn:nhsd:apim:user-nhs-login:P9:personal-demographics-service\ .+|.+\ urn:nhsd:apim:user-nhs-login:P9:personal-demographics-service$|^urn:nhsd:apim:user-nhs-login:P9:personal-demographics-service$)")</Condition>
+      </Step>
+      <Step>
         <!-- Header NHSD-Session-URID must be present and not empty for 'authorization_code'-->
+        <Name>RaiseFault.400BadRequest</Name>
+        <Condition>(grant_type is "authorization_code") and ((request.header.NHSD-Session-URID is null) or (not request.header.NHSD-Session-URID ~~ ".+"))</Condition>
+      </Step>
+      <Step>
         <Name>RaiseFault.400BadRequest</Name>
         <Condition>(grant_type is "authorization_code") and ((request.header.NHSD-Session-URID is null) or (not request.header.NHSD-Session-URID ~~ ".+"))</Condition>
       </Step>
@@ -100,6 +108,21 @@
         <Step>
           <Name>RaiseFault.MaxResultsInvalidAppRestricted</Name>
           <Condition>(proxy.pathsuffix MatchesPath "/Patient" and request.verb Equals "GET" and request.queryparam._max-results NotEquals "1")</Condition>
+        </Step>
+      </Request>
+    </Flow>
+    <Flow name="citizen_access">
+      <Condition>(access-mode Equals "citizen-access")</Condition>
+      <Request>
+        <Step>
+            <Name>DecodeJWT.DecodeIdToken</Name>
+        </Step>
+        <Step>
+            <Name>javascript.RestrictRequest</Name>
+        </Step>
+        <Step>
+          <Name>RaiseFault.InvalidUserNHSlogin</Name>
+          <Condition>apigee.method_is_restricted Equals true</Condition>
         </Step>
       </Request>
     </Flow>
